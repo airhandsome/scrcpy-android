@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Scrcpy extends Service {
 
     private String serverAdr;
+    private String serverPort;
     private Surface surface;
     private int screenWidth;
     private int screenHeight;

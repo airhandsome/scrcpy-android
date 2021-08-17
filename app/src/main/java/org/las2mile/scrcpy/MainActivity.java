@@ -61,6 +61,7 @@ public class MainActivity extends Activity implements Scrcpy.ServiceCallbacks, S
     private String localip;
     private Context context;
     private String serverAdr = null;
+    private String serverPort = null;
     private InputStream inputStream;
     private SurfaceView surfaceView;
     private Surface surface;
@@ -111,7 +112,7 @@ public class MainActivity extends Activity implements Scrcpy.ServiceCallbacks, S
                     localip = wifiIpAddress();
                     getAttributes();
                     if (!serverAdr.isEmpty()) {
-                        if (sendCommands.SendAdbCommands(context, fileBase64, serverAdr, localip, videoBitrate, Math.max(screenHeight, screenWidth)) == 0) {
+                        if (sendCommands.SendAdbCommands(context, fileBase64, serverAdr, serverPort, localip, videoBitrate, Math.max(screenHeight, screenWidth)) == 0) {
                             if (nav) {
                                 startwithNav();
                             } else {
@@ -174,7 +175,9 @@ public class MainActivity extends Activity implements Scrcpy.ServiceCallbacks, S
     private void getAttributes() {
 
         final EditText editTextServerHost = (EditText) findViewById(R.id.editText_server_host);
+        final EditText editTextServerPort = (EditText) findViewById(R.id.editText_server_port);
         serverAdr = editTextServerHost.getText().toString();
+        serverPort = editTextServerPort.getText().toString();
         context.getSharedPreferences(PREFERENCE_KEY, 0).edit().putString("Server Address", serverAdr).apply();
         final Spinner videoResolutionSpinner = (Spinner) findViewById(R.id.spinner_video_resolution);
         final Spinner videoBitrateSpinner = (Spinner) findViewById(R.id.spinner_video_bitrate);
