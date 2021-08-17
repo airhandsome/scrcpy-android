@@ -57,8 +57,8 @@ public final class DroidConnection implements Closeable {
 
     public int[] NewreceiveControlEvent() throws IOException {
 
-        byte[] buf = new byte[16];
-        int n = inputStream.read(buf, 0, 16);
+        byte[] buf = new byte[24];
+        int n = inputStream.read(buf, 0, 24);
         if (n == -1) {
             throw new EOFException("Event controller socket closed");
         }

@@ -1,7 +1,9 @@
 package org.las2mile.scrcpy;
 
 import android.graphics.Point;
+import android.os.Debug;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.InputDevice;
 import android.view.InputEvent;
 import android.view.KeyCharacterMap;
@@ -11,6 +13,8 @@ import android.view.MotionEvent;
 import org.las2mile.scrcpy.wrappers.InputManager;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class EventController {
@@ -19,7 +23,6 @@ public class EventController {
     private final DroidConnection connection;
     private final MotionEvent.PointerProperties[] pointerProperties = {new MotionEvent.PointerProperties()};
     private final MotionEvent.PointerCoords[] pointerCoords = {new MotionEvent.PointerCoords()};
-    private long lastMouseDown;
     private float then;
     private boolean hit = false;
     private boolean proximity = false;
@@ -60,9 +63,11 @@ public class EventController {
         while (true) {
             //           handleEvent();
             int[] buffer = connection.NewreceiveControlEvent();
+            // 0 action 1 2 diff 3 button 4 x  5 y
+            Log.d("scrcpy event length", String.valueOf(buffer.length));
             if (buffer != null) {
                 long now = SystemClock.uptimeMillis();
-                if (buffer[2] == 0 && buffer[3] == 0) {
+                if (buffer[4] == 0 && buffer[5] == 0) {
                     if (buffer[0] == 28) {
                         proximity = true;           // Proximity event
                     } else if (buffer[0] == 29) {
@@ -72,6 +77,9 @@ public class EventController {
                     }
                 } else {
                     int action = buffer[0];
+                    long downtime = now - buffer[1] * 10000 - buffer[2];
+                    Log.d("scrcpy event", String.valueOf(action));
+                    //判断是否电源键没开
                     if (action == MotionEvent.ACTION_UP && (!device.isScreenOn() || proximity)) {
                         if (hit) {
                             if (now - then < 250) {
@@ -87,16 +95,14 @@ public class EventController {
                         }
 
                     } else {
-                        if (action == MotionEvent.ACTION_DOWN) {
-                            lastMouseDown = now;
-                        }
-                        int button = buffer[1];
-                        int X = buffer[2];
-                        int Y = buffer[3];
+                        int button = buffer[3];
+                        int X = buffer[4];
+                        int Y = buffer[5];
                         Point point = new Point(X, Y);
                         Point newpoint = device.NewgetPhysicalPoint(point);
                         setPointerCoords(newpoint);
-                        MotionEvent event = MotionEvent.obtain(lastMouseDown, now, action, 1, pointerProperties, pointerCoords, 0, button, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+//                        MotionEvent event = MotionEvent.obtain(downtime, now, action, X, Y, button);
+                        MotionEvent event = MotionEvent.obtain(downtime, now, action, 1, pointerProperties, pointerCoords, 0, button, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
                         injectEvent(event);
                     }
                 }
