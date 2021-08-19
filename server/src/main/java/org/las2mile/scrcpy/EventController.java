@@ -1,28 +1,23 @@
 package org.las2mile.scrcpy;
 
 import android.graphics.Point;
-import android.os.Debug;
 import android.os.SystemClock;
-import android.util.Log;
 import android.view.InputDevice;
 import android.view.InputEvent;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
-
 import org.las2mile.scrcpy.wrappers.InputManager;
-
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
 
 public class EventController {
 
     private final Device device;
     private final DroidConnection connection;
-    private final MotionEvent.PointerProperties[] pointerProperties = {new MotionEvent.PointerProperties()};
-    private final MotionEvent.PointerCoords[] pointerCoords = {new MotionEvent.PointerCoords()};
+    public static final int MAX_POINTERS = 5;
+    private final MotionEvent.PointerProperties[] pointerProperties = new MotionEvent.PointerProperties[MAX_POINTERS];
+    private final MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[MAX_POINTERS];
+    private long lastTouchDown;
     private float then;
     private boolean hit = false;
     private boolean proximity = false;
@@ -34,20 +29,24 @@ public class EventController {
     }
 
     private void initPointer() {
-        MotionEvent.PointerProperties props = pointerProperties[0];
-        props.id = 0;
-        props.toolType = MotionEvent.TOOL_TYPE_FINGER;
+        for(int i = 0; i < MAX_POINTERS; i++){
+            pointerProperties[i] = new MotionEvent.PointerProperties();
+            pointerProperties[i].id = i;
+            pointerProperties[i].toolType = MotionEvent.TOOL_TYPE_FINGER;
 
-        MotionEvent.PointerCoords coords = pointerCoords[0];
-        coords.orientation = 0;
-        coords.pressure = 1;
-        coords.size = 1;
+            pointerCoords[i] = new MotionEvent.PointerCoords();
+            pointerCoords[i].orientation = 0;
+            pointerCoords[i].pressure = 1;
+            pointerCoords[i].size = 1;
+        }
+
     }
 
-    private void setPointerCoords(Point point) {
-        MotionEvent.PointerCoords coords = pointerCoords[0];
-        coords.x = point.x;
-        coords.y = point.y;
+    private void setPointerCoords(Point point, int index) {
+        if (index >= MAX_POINTERS)
+            index = MAX_POINTERS - 1;
+        pointerCoords[index].x = point.x;
+        pointerCoords[index].y = point.y;
     }
 
     private void setScroll(int hScroll, int vScroll) {
@@ -63,8 +62,7 @@ public class EventController {
         while (true) {
             //           handleEvent();
             int[] buffer = connection.NewreceiveControlEvent();
-            // 0 action 1 2 diff 3 button 4 x  5 y
-            Log.d("scrcpy event length", String.valueOf(buffer.length));
+            // 0 action 1 pointCount 2 pointIndex 3 button 4 x  5 y
             if (buffer != null) {
                 long now = SystemClock.uptimeMillis();
                 if (buffer[4] == 0 && buffer[5] == 0) {
@@ -77,8 +75,7 @@ public class EventController {
                     }
                 } else {
                     int action = buffer[0];
-                    long downtime = now - buffer[1] * 10000 - buffer[2];
-                    Log.d("scrcpy event", String.valueOf(action));
+
                     //判断是否电源键没开
                     if (action == MotionEvent.ACTION_UP && (!device.isScreenOn() || proximity)) {
                         if (hit) {
@@ -95,14 +92,18 @@ public class EventController {
                         }
 
                     } else {
+                        int pointCount = buffer[1];
+                        int pointIndex = buffer[2];
+                        if (pointCount == 1){
+                            lastTouchDown = now;
+                        }
                         int button = buffer[3];
                         int X = buffer[4];
                         int Y = buffer[5];
                         Point point = new Point(X, Y);
                         Point newpoint = device.NewgetPhysicalPoint(point);
-                        setPointerCoords(newpoint);
-//                        MotionEvent event = MotionEvent.obtain(downtime, now, action, X, Y, button);
-                        MotionEvent event = MotionEvent.obtain(downtime, now, action, 1, pointerProperties, pointerCoords, 0, button, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+                        setPointerCoords(newpoint, pointIndex);
+                        MotionEvent event = MotionEvent.obtain(lastTouchDown, now, action, pointCount, pointerProperties, pointerCoords, 0, button, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
                         injectEvent(event);
                     }
                 }

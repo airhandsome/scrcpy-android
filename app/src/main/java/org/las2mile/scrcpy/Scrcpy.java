@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.Surface;
 
@@ -87,9 +88,8 @@ public class Scrcpy extends Service {
 
 
     public boolean touchevent(MotionEvent touch_event, int displayW, int displayH) {
-
-        long diff = touch_event.getEventTime() - touch_event.getDownTime();
-        int[] buf = new int[]{touch_event.getAction(), (int)diff/10000, (int)diff%10000, touch_event.getButtonState(), (int) touch_event.getX() * screenWidth / displayW, (int) touch_event.getY() * screenHeight / displayH};
+        int index = touch_event.getActionIndex();
+        int[] buf = new int[]{touch_event.getAction(), touch_event.getPointerCount(), index, touch_event.getButtonState(), (int) touch_event.getX(index) * screenWidth / displayW, (int) touch_event.getY(index) * screenHeight / displayH};
         final byte[] array = new byte[buf.length * 4]; // https://stackoverflow.com/questions/2183240/java-integer-to-byte-array
         for (int j = 0; j < buf.length; j++) {
             final int c = buf[j];
